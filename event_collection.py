@@ -1,3 +1,5 @@
+#! /Library/Frameworks/Python.framework/Versions/3.9/bin/python3
+
 from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
@@ -31,8 +33,7 @@ class RoseCityBookPub():
     event_source = f'{endpoint}/events-1?view=list' # &month={currentDate}'
     at_rose_city_books = 'at Rose City Book Pub'
 
-    def pull_events(self):
-        print("Pulling events... " + self.event_source)
+    def pullEvents(self):
         results = []
         soup = getBeautifulSoupParserFromUrl(self.event_source)
         events = soup.find_all('article', {'class': 'eventlist-event--upcoming'})
@@ -51,7 +52,7 @@ class Powells():
     endpoint = 'https://www.powells.com'
     event_source = f'{endpoint}/events-update'
 
-    def pull_events(self):
+    def pullEvents(self):
         results = []
         soup = getBeautifulSoupParserFromUrl(self.event_source)
         events = soup.find_all('div', {'class': 'bookwrapper'})
@@ -73,12 +74,9 @@ class Powells():
 
 
 if __name__ == "__main__":
-    #events = RoseCityBookPub().pull_events()
-    #for e in events:
-    #    print(e.getTitle())
-    events = Powells().pull_events()
-    events.extend(RoseCityBookPub().pull_events())
-    for e in events:
-        print(e.getTitle())
-
-
+    sources  = [ RoseCityBookPub(), Powells() ]
+    events = []
+    for source in sources:
+        events.extend(source.pullEvents())
+    for event in events:
+        print(event.getTitle())
