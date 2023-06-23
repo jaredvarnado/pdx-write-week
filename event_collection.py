@@ -39,31 +39,74 @@ class Event:
 def getBeautifulSoupParserFromUrl(url):
     return BeautifulSoup(requests.get(url).text, 'html.parser')
 
+def formatDate(date):
+    return date.strftime('%m/%d/%Y')
+
 class WillametteWriters():
 
     endpoint = 'https://willamettewriters.org'
     event_source = f'{endpoint}/events/month/'
+    will_writers = 'Willamette Writers'
+    date_format = '%Y-%m-%d'
+
+    def shouldIncludeEvent(self, event):
+        if event.getTitle() == "Portland: Office Closed":
+            return False
+        return True
+
+    def formatTitle(self, title):
+        isVirtual = False
+        isHybrid = False
+        hybridSuffix = '(hybrid in person/virtual)'
+        if title.startswith("Online:"):
+            title = title[8:].strip() # cut out 'Online:'
+            isVirtual = True
+        elif title.startswith("Hybrid"):
+            title = title[7:].strip()
+            isHybrid = True
+        if title.startswith("Hillsboro:"):
+            title = title[10:].strip()
+            title = f'{self.will_writers} Hillsboro Presents {title}'
+        elif title.startswith("Eugene:"):
+            title = title[7:].strip()
+            title = f"{self.will_writers} Eugene Presents {title}"
+        elif title.startswith("Salem"):
+            title = title[6:].strip()
+            title = f"{self.will_writers} Salem Presents {title}"
+        elif title.startswith("Corvallis"):
+            title = title[10:].strip()
+            title = f"{self.will_writers} Corvallis Presents {title}"
+        elif "Portland: Office Hours" == title:
+            title = "Willamette Writers Portland Office Hours"
+        elif title.startswith("Portland:"):
+            title = title[10:].strip()
+            title = f"{self.will_writers} Portland Presents {title}"
+        else:
+            title = f"{title} with Willamette Writers"
+        if isVirtual == True:
+            title = f"{title} (virtual)"
+        if isHybrid == True:
+            title = f"{title} {hybridSuffix}"
+        return title
 
     def pullEvents(self):
         results = []
         soup = getBeautifulSoupParserFromUrl(self.event_source)
         days = soup.find_all('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-day'})
         for day in days:
-            #print(day)
             events = day.findChildren('article')
             for e in events:
                 atag = e.findChildren('a', {'class': 'tribe-events-calendar-month-mobile-events__mobile-event-title-link tribe-common-anchor'})[0]
                 link = atag.get('href')
-                title = atag.get('title')
-                if title.startswith("Online:"):
-                    title = title[8:] # cut out 'Online:'
-                    title = f'{title} (virtual)' # add virtual suffix
-                if "Portland: Office Hours" == title:
-                    title = "Willamette Writers Portland Office Hours"
+                title = self.formatTitle(atag.get('title'))
                 event_date = e.findChildren('time')[0].get('datetime')
+                event_date_formated = formatDate(datetime.strptime(event_date, self.date_format).date())
                 event_start = e.findChildren('span', {'class': 'tribe-event-date-start'})[0].get_text()
+                event_start = event_start.split('@')[1].strip()
                 event_end = e.findChildren('span', {'class': 'tribe-event-time'})[0].get_text()
-                results.append(Event(title, event_date, event_start, event_end, link))
+                result = Event(title, event_date_formated, event_start, event_end, link)
+                if self.shouldIncludeEvent(result) == True:
+                    results.append(result)
         return results
 
 class RoseCityBookPub():
@@ -72,6 +115,7 @@ class RoseCityBookPub():
     endpoint = 'https://www.rosecitybookpub.com'
     event_source = f'{endpoint}/events-1?view=list' # &month={currentDate}'
     at_rose_city_books = 'at Rose City Book Pub'
+    date_format = '%A, %B %d, %Y'
 
     def pullEvents(self):
         results = []
@@ -82,10 +126,12 @@ class RoseCityBookPub():
             event_abs_link = f'{self.endpoint}{event_rel_link}'
             event_title = e.findChildren('h1', {'class': 'eventlist-title'})[0].get_text()
             event_title = f'{event_title} {self.at_rose_city_books}'
-            event_date = e.findChildren('time', {'class': 'event-date'})[0].get_text()
+            event_date = e.findChildren('time', {'class': 'event-date'})[0].get_text().strip()
+            event_date_formated = formatDate(datetime.strptime(event_date, self.date_format).date())
+            print(f"Converted Date From {event_date} -> {event_date_formated}")
             start_time = e.findChildren('time', {'class': 'event-time-12hr-start'})[0].get_text()
             end_time = e.findChildren('time', {'class': 'event-time-12hr-end'})[0].get_text()
-            results.append(Event(event_title, event_date, start_time, end_time, event_abs_link))
+            results.append(Event(event_title, event_date_formated, start_time, end_time, event_abs_link))
         return results
 
 class Powells():
@@ -105,11 +151,16 @@ class Powells():
             event_title = f'{event_title} at {location}'
 
             start_time = date.split('@')[1].split('(')[0].strip()
-            date = date.split('@')[0].strip()
+            # Something to look out for - 
+            # Powells' site does not include the Year (as of now).
+            # This could cause a bug where calendar dates for next year begin (i.e. Jan 1)
+            # we would be tacking on the current year to the end of it (i.e Jan 1, 2023 instead of 2024).
+            date = date.split('@')[0].strip() + ', ' + str(datetime.now().year)
+            date_formated = formatDate(datetime.strptime(date, '%A, %B %d, %Y').date())
 
             link = e.findChildren('a')[0].get('href')
             link = f'{self.endpoint}{link}'
-            results.append(Event(event_title, date, start_time, None, link))
+            results.append(Event(event_title, date_formated, start_time, None, link))
         return results
 
 
