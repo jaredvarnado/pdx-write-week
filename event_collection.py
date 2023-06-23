@@ -4,6 +4,18 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
+## TODO: Sources to Add
+# 1. Mother Foucault's Bookshop - https://www.motherfoucaultsbookshop.com/calendar-list/stephen-thomas-teresa-k-miller
+# 2. Willamette Writers - https://willamettewriters.org/event/online-the-write-place-productivity-and-goal-setting/2023-06-22/
+# 3. Annie Blooms - https://www.annieblooms.com/event/reading-zaji-cox-plums-months
+# 4. The Stacks Coffeehouse - https://www.thestackscoffeehouse.com/writingcafe
+# 5. Literary Arts - (may need to filter type of event?) https://literary-arts.org/event 
+
+## TODO: Filter all events by date range
+# * Determine beginning and end dates for time range (1 week/2 weeks?)
+# * Format date of event into timestamp to use for comparison operations.
+# * if event_timestamp is between timerange_start and timerange_end -> include event.
+
 class Event:
     def __init__(self, title, date, startTime, endTime, link):
         self.title = title
@@ -11,7 +23,6 @@ class Event:
         self.startTime = startTime
         self.endTime = endTime
         self.link = link
-
     def getTitle(self):
         return self.title
     def getDate(self):
@@ -22,9 +33,38 @@ class Event:
         return self.endTime
     def getLink(self):
         return self.link
+    def toString(self):
+        return f"{self.title},{self.date},{self.startTime},{self.endTime},{self.link}"
 
 def getBeautifulSoupParserFromUrl(url):
     return BeautifulSoup(requests.get(url).text, 'html.parser')
+
+class WillametteWriters():
+
+    endpoint = 'https://willamettewriters.org'
+    event_source = f'{endpoint}/events/month/'
+
+    def pullEvents(self):
+        results = []
+        soup = getBeautifulSoupParserFromUrl(self.event_source)
+        days = soup.find_all('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-day'})
+        for day in days:
+            #print(day)
+            events = day.findChildren('article')
+            for e in events:
+                atag = e.findChildren('a', {'class': 'tribe-events-calendar-month-mobile-events__mobile-event-title-link tribe-common-anchor'})[0]
+                link = atag.get('href')
+                title = atag.get('title')
+                if title.startswith("Online:"):
+                    title = title[8:] # cut out 'Online:'
+                    title = f'{title} (virtual)' # add virtual suffix
+                if "Portland: Office Hours" == title:
+                    title = "Willamette Writers Portland Office Hours"
+                event_date = e.findChildren('time')[0].get('datetime')
+                event_start = e.findChildren('span', {'class': 'tribe-event-date-start'})[0].get_text()
+                event_end = e.findChildren('span', {'class': 'tribe-event-time'})[0].get_text()
+                results.append(Event(title, event_date, event_start, event_end, link))
+        return results
 
 class RoseCityBookPub():
     # We can filter events by month.
@@ -74,9 +114,9 @@ class Powells():
 
 
 if __name__ == "__main__":
-    sources  = [ RoseCityBookPub(), Powells() ]
+    sources  = [ RoseCityBookPub(), Powells(), WillametteWriters() ]
     events = []
     for source in sources:
         events.extend(source.pullEvents())
     for event in events:
-        print(event.getTitle())
+        print(event.toString())
