@@ -10,14 +10,9 @@ import requests
 ## TODO: Sources to Add
 # 1. [done] Mother Foucault's Bookshop - https://www.motherfoucaultsbookshop.com/calendar-list/stephen-thomas-teresa-k-miller
 # 2. [done] Willamette Writers - https://willamettewriters.org/event/online-the-write-place-productivity-and-goal-setting/2023-06-22/
-# 3. Annie Blooms - https://www.annieblooms.com/event/reading-zaji-cox-plums-months
+# 3. [done] Annie Blooms - https://www.annieblooms.com/event/reading-zaji-cox-plums-months
 # 4. The Stacks Coffeehouse - https://www.thestackscoffeehouse.com/writingcafe
 # 5. Literary Arts - (may need to filter type of event?) https://literary-arts.org/event 
-
-## TODO: Filter all events by date range
-# * Determine beginning and end dates for time range (1 week/2 weeks?)
-# * Format date of event into timestamp to use for comparison operations.
-# * if event_timestamp is between timerange_start and timerange_end -> include event.
 
 class Event:
     def __init__(self, title, date, startTime, endTime, link):
@@ -45,17 +40,22 @@ def getBeautifulSoupParserFromUrl(url):
 def formatDate(date):
     return date.strftime('%m/%d/%Y')
 
+def shouldIncludeEvent(event, start_date, end_date):
+    if event.getTitle() == "Portland: Office Closed":
+        return False
+    event_date = datetime.datetime.strptime(event.getDate(), '%m/%d/%Y')
+    if event_date < start_date:
+        return False
+    if event_date > end_date:
+        return False
+    return True
+
 class WillametteWriters():
 
     endpoint = 'https://willamettewriters.org'
     event_source_url = f'{endpoint}/events/month/'
     will_writers = 'Willamette Writers'
     date_format = '%Y-%m-%d'
-
-    def shouldIncludeEvent(self, event):
-        if event.getTitle() == "Portland: Office Closed":
-            return False
-        return True
 
     def formatTitle(self, title):
         isVirtual = False
@@ -94,8 +94,15 @@ class WillametteWriters():
 
     def pullEvents(self, period_start, period_end):
         results = []
+        start_month = period_start.month
+        end_month = period_end.month
         soup = getBeautifulSoupParserFromUrl(self.event_source_url)
         days = soup.find_all('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-day'})
+
+        if start_month != end_month:
+            soup_next_month = getBeautifulSoupParserFromUrl(f'{self.event_source_url}{period_end.year}-{end_month}/')
+            days.extend(soup.find_all('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-day'}))
+
         for day in days:
             events = day.findChildren('article')
             for e in events:
@@ -108,13 +115,14 @@ class WillametteWriters():
                 event_start = event_start.split('@')[1].strip()
                 event_end = e.findChildren('span', {'class': 'tribe-event-time'})[0].get_text()
                 result = Event(title, event_date_formated, event_start, event_end, link)
-                if self.shouldIncludeEvent(result) == True:
+                if shouldIncludeEvent(result, period_start, period_end):
                     results.append(result)
         return results
 
 class RoseCityBookPub():
     # We can filter events by month.
     # currentDate = f"{datetime.now().strftime('%m')}-{datetime.now().year}"
+    # However RCB Events page includes all upcoming events by default.
     endpoint = 'https://www.rosecitybookpub.com'
     event_source_url = f'{endpoint}/events-1?view=list' # &month={currentDate}'
     at_rose_city_books = 'at Rose City Book Pub'
@@ -134,7 +142,9 @@ class RoseCityBookPub():
             print(f"Converted Date From {event_date} -> {event_date_formated}")
             start_time = e.findChildren('time', {'class': 'event-time-12hr-start'})[0].get_text()
             end_time = e.findChildren('time', {'class': 'event-time-12hr-end'})[0].get_text()
-            results.append(Event(event_title, event_date_formated, start_time, end_time, event_abs_link))
+            result = Event(event_title, event_date_formated, start_time, end_time, event_abs_link)
+            if shouldIncludeEvent(result, period_start, period_end):
+                results.append(result)
         return results
 
 class Powells():
@@ -163,7 +173,9 @@ class Powells():
 
             link = e.findChildren('a')[0].get('href')
             link = f'{self.endpoint}{link}'
-            results.append(Event(event_title, date_formated, start_time, None, link))
+            result = Event(event_title, date_formated, start_time, None, link)
+            if shouldIncludeEvent(result, period_start, period_end):
+                results.append(result)
         return results
 
 
@@ -190,17 +202,19 @@ class MotherFoucaults():
             event_end = e.findChildren('time', {'class': 'event-time-localized-end'})[0].get_text()
             link = e.findChildren('a', {'class': 'eventlist-title-link'})[0].get('href')
             link = f'{self.endpoint}{link}'
-            results.append(Event(title, event_date_formated, event_start, event_end, link))
+            result = Event(title, event_date_formated, event_start, event_end, link)
+            if shouldIncludeEvent(result, period_start, period_end):
+                results.append(result)
         return results
 
 class AnnieBloom():
     endpoint = 'https://www.annieblooms.com'
     event_source_url = f'{endpoint}/event/' # Might need to add date to url path (i.e. /2023-07)
-
+    at_bookstore = 'at Annie Bloom\'s Books'
     def pullEvents(self, period_start, period_end):
         results = []
-        start_month = today.month
-        end_month = week_from_now.month
+        start_month = period_start.month
+        end_month = period_end.month
         soup = getBeautifulSoupParserFromUrl(self.event_source_url)
         events = soup.find_all('td', {'class': 'single-day future'})
 
@@ -212,8 +226,16 @@ class AnnieBloom():
             events.extend(soup_next_month.find_all('td', {'class': 'single-day future'}))
 
         for e in events:
-            title = e.findChildren('div', {'class': 'views-field views-field-title'})[0].get_text()
-            print(title)
+            title = e.findChildren('div', {'class': 'views-field views-field-title'})[0].get_text().strip()
+            title = f'{title} {self.at_bookstore}'
+            date = e.findChildren('span', {'class': 'date-display-single'})[0].get_text().strip()
+            date = date.split('-')[0].strip()
+            event_start = e.findChildren('span', {'class': 'date-display-start'})[0].get_text().strip()
+            event_end = e.findChildren('span', {'class': 'date-display-end'})[0].get_text().strip()
+            link = f"{self.endpoint}{e.findChildren('a')[0].get('href')}"
+            result = Event(title, date, event_start, event_end, link)
+            if shouldIncludeEvent(result, period_start, period_end):
+                results.append(result)
 
         return results
 
@@ -221,10 +243,14 @@ if __name__ == "__main__":
     today = datetime.datetime.now()
     week_from_now = today + datetime.timedelta(days=7)
     print(f'Pulling events from {today} to {week_from_now}')
-    sources  = [ MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters() ]
-    #sources = [ AnnieBloom() ]
+
+    sources  = [ AnnieBloom(), MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters() ]
     events = []
     for source in sources:
         events.extend(source.pullEvents(today, week_from_now))
+
+    # Sort events by date
+    events.sort(key=lambda x: x.date)
+
     for event in events:
         print(event.toString())
