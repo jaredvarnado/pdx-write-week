@@ -7,6 +7,7 @@ class AnnieBloom():
     endpoint = 'https://www.annieblooms.com'
     event_source_url = f'{endpoint}/event/' # Might need to add date to url path (i.e. /2023-07)
     at_bookstore = 'at Annie Bloom\'s Books'
+
     def pullEvents(self, period_start, period_end):
         results = []
         start_month = period_start.month

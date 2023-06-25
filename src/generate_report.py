@@ -13,24 +13,28 @@ from sources.powells import Powells
 from sources.rosecity import RoseCityBookPub
 from sources.stacks_coffee import StacksCoffee
 from sources.willamette_writers import WillametteWriters
-
-from generate_templates import print_html_doc
+from utils import formatDate
+from generate_templates import generate_html_doc, write_html_doc
 
 EVENT_TIME_WINDOW_IN_DAYS = 7
 
 # TODO: Remove duplicate events from list
 if __name__ == "__main__":
     today = datetime.datetime.now()
-    week_from_now = today + datetime.timedelta(days=EVENT_TIME_WINDOW_IN_DAYS)
+    report_end_date = today + datetime.timedelta(days=EVENT_TIME_WINDOW_IN_DAYS)
 
-    print(f'Pulling events from {today} to {week_from_now}')
+    print(f'Pulling events from {today} to {report_end_date}')
     sources  = [ BroadwayBooks(), LiteraryArts(), AnnieBloom(), MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters(), StacksCoffee() ]
-
     events = []
     for source in sources:
-        events.extend(source.pullEvents(today, week_from_now))
+        print(f'Requesting events from [{source.endpoint}]')
+        results = source.pullEvents(today, report_end_date)
+        print(f'Found {str(len(results))} events')
+        events.extend(results)
 
     # Sort events by date
     events.sort(key=lambda x: x.date)
 
-    print_html_doc(events)
+    report = generate_html_doc(formatDate(today), formatDate(report_end_date), events)
+    out_file = f"./pdx-weekly-report-{today.strftime('%Y%m%d')}-{report_end_date.strftime('%Y%m%d')}.html"
+    write_html_doc(out_file, report)

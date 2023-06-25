@@ -5,6 +5,12 @@ class Event:
         self.startTime = startTime
         self.endTime = endTime
         self.link = link
+
+        if self.startTime is not None:
+            self.startTime = self.startTime.replace(" ", "")
+        if self.endTime is not None:
+            self.endTime = self.endTime.replace(" ", "")
+
     def getTitle(self):
         return self.title
     def getDate(self):

@@ -13,7 +13,7 @@ class StacksCoffee():
         events = soup.find_all('div', {'class': 'eventlist-column-info'})
         for e in events:
             title_and_link = e.findChildren('a', {'class': 'eventlist-title-link'})[0]
-            title = title_and_link.get_text().strip()
+            title = f'{title_and_link.get_text().strip()} {self.at_bookstore}'
             link = f"{self.endpoint}{title_and_link.get('href')}"
             date = e.findChildren('time', {'class': 'event-date'})[0].get('datetime')
             date = formatDate(datetime.datetime.strptime(date, '%Y-%m-%d').date())
