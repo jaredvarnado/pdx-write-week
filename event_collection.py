@@ -7,11 +7,15 @@ import datetime
 from bs4 import BeautifulSoup
 import requests
 
+
+EVENT_TIME_WINDOW_IN_DAYS = 7
+
+
 ## TODO: Sources to Add
 # 1. [done] Mother Foucault's Bookshop - https://www.motherfoucaultsbookshop.com/calendar-list/stephen-thomas-teresa-k-miller
 # 2. [done] Willamette Writers - https://willamettewriters.org/event/online-the-write-place-productivity-and-goal-setting/2023-06-22/
 # 3. [done] Annie Blooms - https://www.annieblooms.com/event/reading-zaji-cox-plums-months
-# 4. The Stacks Coffeehouse - https://www.thestackscoffeehouse.com/writingcafe
+# 4. [done] The Stacks Coffeehouse - https://www.thestackscoffeehouse.com/writingcafe
 # 5. Literary Arts - (may need to filter type of event?) https://literary-arts.org/event 
 
 class Event:
@@ -239,12 +243,36 @@ class AnnieBloom():
 
         return results
 
+class StacksCoffee():
+    endpoint = 'https://www.thestackscoffeehouse.com'
+    event_source_url = f'{endpoint}/events'
+    at_bookstore = 'at the Stacks Coffeehouse'
+
+    def pullEvents(self, period_start, period_end):
+        results = []
+        soup = getBeautifulSoupParserFromUrl(self.event_source_url)
+        events = soup.find_all('div', {'class': 'eventlist-column-info'})
+        for e in events:
+            title_and_link = e.findChildren('a', {'class': 'eventlist-title-link'})[0]
+            title = title_and_link.get_text().strip()
+            link = f"{self.endpoint}{title_and_link.get('href')}"
+            date = e.findChildren('time', {'class': 'event-date'})[0].get('datetime')
+            date = formatDate(datetime.datetime.strptime(date, '%Y-%m-%d').date())
+            event_start = e.findChildren('time', {'class': 'event-time-12hr-start'})[0].get_text().strip()
+            event_end= e.findChildren('time', {'class': 'event-time-12hr-end'})[0].get_text().strip()
+            result = Event(title, date, event_start, event_end, link)
+            if shouldIncludeEvent(result, period_start, period_end):
+                results.append(result)
+
+        return results
+
 if __name__ == "__main__":
     today = datetime.datetime.now()
-    week_from_now = today + datetime.timedelta(days=7)
+    week_from_now = today + datetime.timedelta(days=EVENT_TIME_WINDOW_IN_DAYS)
+
     print(f'Pulling events from {today} to {week_from_now}')
 
-    sources  = [ AnnieBloom(), MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters() ]
+    sources  = [ AnnieBloom(), MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters(), StacksCoffee() ]
     events = []
     for source in sources:
         events.extend(source.pullEvents(today, week_from_now))
