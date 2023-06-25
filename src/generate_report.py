@@ -1,3 +1,4 @@
+# Warning: you'll likely need to change this line to your local python path
 #! /Library/Frameworks/Python.framework/Versions/3.9/bin/python3
 
 # PDX Write Week
