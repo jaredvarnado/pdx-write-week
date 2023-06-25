@@ -10,12 +10,11 @@ import requests
 
 EVENT_TIME_WINDOW_IN_DAYS = 7
 
-
-## TODO: Sources to Add
-# 1. [done] Mother Foucault's Bookshop - https://www.motherfoucaultsbookshop.com/calendar-list/stephen-thomas-teresa-k-miller
-# 2. [done] Willamette Writers - https://willamettewriters.org/event/online-the-write-place-productivity-and-goal-setting/2023-06-22/
-# 3. [done] Annie Blooms - https://www.annieblooms.com/event/reading-zaji-cox-plums-months
-# 4. [done] The Stacks Coffeehouse - https://www.thestackscoffeehouse.com/writingcafe
+# Currently support the following event sources:
+# 1. Mother Foucault's Bookshop - https://www.motherfoucaultsbookshop.com/calendar-list/stephen-thomas-teresa-k-miller
+# 2. Willamette Writers - https://willamettewriters.org/event/online-the-write-place-productivity-and-goal-setting/2023-06-22/
+# 3. Annie Blooms - https://www.annieblooms.com/event/reading-zaji-cox-plums-months
+# 4. The Stacks Coffeehouse - https://www.thestackscoffeehouse.com/writingcafe
 # 5. Literary Arts - (may need to filter type of event?) https://literary-arts.org/event 
 
 class Event:
@@ -143,7 +142,6 @@ class RoseCityBookPub():
             event_title = f'{event_title} {self.at_rose_city_books}'
             event_date = e.findChildren('time', {'class': 'event-date'})[0].get_text().strip()
             event_date_formated = formatDate(datetime.datetime.strptime(event_date, self.date_format).date())
-            print(f"Converted Date From {event_date} -> {event_date_formated}")
             start_time = e.findChildren('time', {'class': 'event-time-12hr-start'})[0].get_text()
             end_time = e.findChildren('time', {'class': 'event-time-12hr-end'})[0].get_text()
             result = Event(event_title, event_date_formated, start_time, end_time, event_abs_link)
@@ -266,13 +264,55 @@ class StacksCoffee():
 
         return results
 
+class LiteraryArts():
+    # tribe-common-g-row tribe-events-calendar-list__event-row
+    endpoint = 'https://literary-arts.org'
+    event_source_url = f'{endpoint}/event'
+    at_arts = 'at Literary Arts'
+    tuition_required = '(tuition required)'
+    virtual = '(virtual)'
+
+    def pullEvents(self, period_start, period_end):
+        results = []
+        soup = getBeautifulSoupParserFromUrl(self.event_source_url)
+        events = soup.find_all('div', {'class': 'tribe-common-g-row tribe-events-calendar-list__event-row'})
+        for e in events:
+            event_date = e.findChildren('time', {'class': 'tribe-events-calendar-list__event-datetime'})[0].get('datetime')
+            event_date = formatDate(datetime.datetime.strptime(event_date, '%Y-%m-%d').date())
+            event_start = e.findChildren('span', {'class': 'tribe-event-date-start'})[0].get_text().split('from')[1].strip()
+            event_end = e.findChildren('span', {'class': 'tribe-event-time'})[0].get_text().strip()
+            title_upper_case = e.findChildren('h3', {'class': 'tribe-events-list-event-title'})[0]
+            title = title_upper_case.findChildren('a')[0].get('title')
+            title = f'{title} {self.at_arts}'
+        
+            link = title_upper_case.findChildren('a')[0].get('href')
+            tags = e.findChildren('header', {'class': 'tribe-events-calendar-list__event-header'})
+            added_virt = False
+            added_tu = False
+            for tag in tags:
+                if "writing classes" in tag.get_text().strip().lower():
+                    if added_tu == False:
+                        title = f'{title} {self.tuition_required}'
+                        added_tu = True
+                if "online" in tag.get_text().strip().lower():
+                    if added_virt == False:
+                        title = f'{title} {self.virtual}'
+                        added_virt = True
+
+            result = Event(title, event_date, event_start, event_end, link)
+            if shouldIncludeEvent(result, period_start, period_end):
+                results.append(result)
+        return results
+
+
+# TODO: Remove duplicate events from list
 if __name__ == "__main__":
     today = datetime.datetime.now()
     week_from_now = today + datetime.timedelta(days=EVENT_TIME_WINDOW_IN_DAYS)
 
     print(f'Pulling events from {today} to {week_from_now}')
+    sources  = [ LiteraryArts(), AnnieBloom(), MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters(), StacksCoffee() ]
 
-    sources  = [ AnnieBloom(), MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters(), StacksCoffee() ]
     events = []
     for source in sources:
         events.extend(source.pullEvents(today, week_from_now))
