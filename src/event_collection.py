@@ -14,6 +14,8 @@ from sources.rosecity import RoseCityBookPub
 from sources.stacks_coffee import StacksCoffee
 from sources.willamette_writers import WillametteWriters
 
+from generate_templates import print_html_doc
+
 EVENT_TIME_WINDOW_IN_DAYS = 7
 
 # TODO: Remove duplicate events from list
@@ -31,5 +33,4 @@ if __name__ == "__main__":
     # Sort events by date
     events.sort(key=lambda x: x.date)
 
-    for event in events:
-        print(event.toString())
+    print_html_doc(events)

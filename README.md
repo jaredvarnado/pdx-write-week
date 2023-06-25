@@ -4,6 +4,11 @@
 
 * Python 3.9 or higher
 * BeautifulSoup
+* Jinja2
+
+```
+pip install Jinja2
+```
 
 ### Scripts 
 
