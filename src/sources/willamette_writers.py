@@ -1,6 +1,6 @@
 import datetime
 from event import Event
-from utils import getBeautifulSoupParserFromUrl, formatDate, shouldIncludeEvent
+from utils import getBeautifulSoupParserFromUrl, getDifferenceBetweenDatesInMonths, getMonthsBetweenDates, formatDate, shouldIncludeEvent
 
 class WillametteWriters():
 
@@ -51,9 +51,12 @@ class WillametteWriters():
         soup = getBeautifulSoupParserFromUrl(self.event_source_url)
         days = soup.find_all('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-day'})
 
-        if start_month != end_month:
-            soup_next_month = getBeautifulSoupParserFromUrl(f'{self.event_source_url}{period_end.year}-{end_month}/')
-            days.extend(soup.find_all('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-day'}))
+        if getDifferenceBetweenDatesInMonths(period_start, period_end) != 0:
+            for m in getMonthsBetweenDates(period_end, period_start):
+                month_url = f'{self.event_source_url}{m}/'
+                print(f"Making extra call to [ {month_url} ]")
+                soup_next_month = getBeautifulSoupParserFromUrl(f'{month_url}')
+                days.extend(soup.find_all('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-day'}))
 
         for day in days:
             events = day.findChildren('article')
@@ -66,7 +69,7 @@ class WillametteWriters():
                 event_start = e.findChildren('span', {'class': 'tribe-event-date-start'})[0].get_text()
                 event_start = event_start.split('@')[1].strip()
                 event_end = e.findChildren('span', {'class': 'tribe-event-time'})[0].get_text()
-                result = Event(title, event_date_formated, event_start, event_end, link)
+                result = Event(title, event_date_formated, event_start, event_end, link, self.will_writers)
                 if shouldIncludeEvent(result, period_start, period_end):
                     results.append(result)
         return results

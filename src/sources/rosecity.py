@@ -9,6 +9,7 @@ class RoseCityBookPub():
     endpoint = 'https://www.rosecitybookpub.com'
     event_source_url = f'{endpoint}/events-1?view=list' # &month={currentDate}'
     at_rose_city_books = 'at Rose City Book Pub'
+    source_name = 'Rose City Book Pub'
     date_format = '%A, %B %d, %Y'
 
     def pullEvents(self, period_start, period_end):
@@ -24,7 +25,7 @@ class RoseCityBookPub():
             event_date_formated = formatDate(datetime.datetime.strptime(event_date, self.date_format).date())
             start_time = e.findChildren('time', {'class': 'event-time-12hr-start'})[0].get_text()
             end_time = e.findChildren('time', {'class': 'event-time-12hr-end'})[0].get_text()
-            result = Event(event_title, event_date_formated, start_time, end_time, event_abs_link)
+            result = Event(event_title, event_date_formated, start_time, end_time, event_abs_link, self.source_name)
             if shouldIncludeEvent(result, period_start, period_end):
                 results.append(result)
         return results

@@ -6,6 +6,7 @@ class LiteraryArts():
     endpoint = 'https://literary-arts.org'
     event_source_url = f'{endpoint}/event'
     at_arts = 'at Literary Arts'
+    source_name = 'Literary Arts'
     tuition_required = '(tuition required)'
     virtual = '(virtual)'
 
@@ -36,7 +37,7 @@ class LiteraryArts():
                         title = f'{title} {self.virtual}'
                         added_virt = True
 
-            result = Event(title, event_date, event_start, event_end, link)
+            result = Event(title, event_date, event_start, event_end, link, self.source_name)
             if shouldIncludeEvent(result, period_start, period_end):
                 results.append(result)
         return results

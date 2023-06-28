@@ -1,11 +1,13 @@
+from datetime import datetime
+
 class Event:
-    def __init__(self, title, date, startTime, endTime, link):
-        self.title = title
+    def __init__(self, title, date, startTime, endTime, link, source):
+        self.title = title.replace('"', '')
         self.date = date
         self.startTime = startTime
         self.endTime = endTime
         self.link = link
-
+        self.source = source
         if self.startTime is not None:
             self.startTime = self.startTime.replace(" ", "")
         if self.endTime is not None:
@@ -21,5 +23,14 @@ class Event:
         return self.endTime
     def getLink(self):
         return self.link
-    def toString(self):
-        return f"{self.title},{self.date},{self.startTime},{self.endTime},{self.link}"
+    def getSource(self):
+        return self.source
+
+    def toRow(self):
+        description = ''
+        if self.startTime is not None:
+            if self.endTime is not None:
+                description = f'{self.startTime} - {self.endTime}'
+            else:
+                description = f'{self.startTime}'
+        return [ self.title, description, self.date, self.link, self.source, datetime.strptime(self.date, '%m/%d/%Y').date().isocalendar()[1] ]

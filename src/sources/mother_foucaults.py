@@ -7,6 +7,7 @@ class MotherFoucaults():
     endpoint = 'https://www.motherfoucaultsbookshop.com'
     event_source_url = f'{endpoint}/calendar-list/'
     at_bookshop = 'at Mother Foucault\'s Bookshop'
+    source_name = 'Mother Foucault\'s Bookshop'
 
     # Mother F's contains events like "<Month> OPP"
     # with no description of said event.
@@ -26,7 +27,7 @@ class MotherFoucaults():
             event_end = e.findChildren('time', {'class': 'event-time-localized-end'})[0].get_text()
             link = e.findChildren('a', {'class': 'eventlist-title-link'})[0].get('href')
             link = f'{self.endpoint}{link}'
-            result = Event(title, event_date_formated, event_start, event_end, link)
+            result = Event(title, event_date_formated, event_start, event_end, link, self.source_name)
             if shouldIncludeEvent(result, period_start, period_end):
                 results.append(result)
         return results

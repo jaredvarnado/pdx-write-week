@@ -5,6 +5,7 @@
 # https://us8.campaign-archive.com/home/?u=c5694bf7a3c233e034ad68e1c&id=6eafe29f11
 
 import datetime
+import argparse
 
 from sources.annie_bloom import AnnieBloom
 from sources.broadway_books import BroadwayBooks
@@ -15,19 +16,37 @@ from sources.rosecity import RoseCityBookPub
 from sources.stacks_coffee import StacksCoffee
 from sources.willamette_writers import WillametteWriters
 from utils import formatDate
-from generate_templates import generate_html_doc, write_html_doc
+from generate_templates import generate_csv, generate_html
 
 EVENT_TIME_WINDOW_IN_DAYS = 7
 
+
+parser = argparse.ArgumentParser(description='Generate Report will generate a report.')
+parser.add_argument('--one-week', action='store_true',
+                    help='Pull events for only the next week.')
+parser.add_argument('--output', help='Type of output [ html, csv ]. Defaults to csv.')
+
 # TODO: Remove duplicate events from list
 if __name__ == "__main__":
-    today = datetime.datetime.now()
-    report_end_date = today + datetime.timedelta(days=EVENT_TIME_WINDOW_IN_DAYS)
+    args = parser.parse_args()
 
-    print(f'Pulling events from {today} to {report_end_date}')
+    output_type = args.output if args.output is not None else 'csv'
+    output_type = output_type.lower()
+    if output_type not in [ 'csv', 'html' ]:
+        raise Exception("Output can only be [ csv ] or [ html ]")
+
+    today = datetime.datetime.now()
+    if args.one_week:
+        report_end_date = today + datetime.timedelta(days=EVENT_TIME_WINDOW_IN_DAYS)
+        print(f'Pulling events from {today} to {report_end_date}')
+    else:
+        report_end_date = today + datetime.timedelta(days=120)
+        print('Pulling all upcoming events.')
+
     sources  = [ BroadwayBooks(), LiteraryArts(), AnnieBloom(), MotherFoucaults(), RoseCityBookPub(), Powells(), WillametteWriters(), StacksCoffee() ]
     events = []
     for source in sources:
+        results = []
         print(f'Requesting events from [{source.endpoint}]')
         results = source.pullEvents(today, report_end_date)
         print(f'Found {str(len(results))} events')
@@ -36,6 +55,13 @@ if __name__ == "__main__":
     # Sort events by date
     events.sort(key=lambda x: x.date)
 
-    report = generate_html_doc(formatDate(today), formatDate(report_end_date), events)
-    out_file = f"./pdx-weekly-report-{today.strftime('%Y%m%d')}-{report_end_date.strftime('%Y%m%d')}.html"
-    write_html_doc(out_file, report)
+    out_file = 'pdx-weekly-report'
+    if args.one_week:
+        out_file = f"{out_file}-{today.strftime('%Y%m%d')}-{report_end_date.strftime('%Y%m%d')}.{output_type}"
+    else:
+        out_file = f"{out_file}-{today.strftime('%Y%m%d')}.{output_type}"
+
+    if output_type == 'html':
+        generate_html(out_file, formatDate(today), formatDate(report_end_date), events)
+    else:
+        generate_csv(out_file, events)

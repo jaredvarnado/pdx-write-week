@@ -3,6 +3,7 @@ from event import Event
 from utils import getBeautifulSoupParserFromUrl, formatDate, shouldIncludeEvent
 
 class Powells():
+    source_name = 'Powells'
     endpoint = 'https://www.powells.com'
     event_source_url = f'{endpoint}/events-update'
 
@@ -28,7 +29,7 @@ class Powells():
 
             link = e.findChildren('a')[0].get('href')
             link = f'{self.endpoint}{link}'
-            result = Event(event_title, date_formated, start_time, None, link)
+            result = Event(event_title, date_formated, start_time, None, link, self.source_name)
             if shouldIncludeEvent(result, period_start, period_end):
                 results.append(result)
         return results
