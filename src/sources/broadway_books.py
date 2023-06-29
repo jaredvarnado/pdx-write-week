@@ -29,7 +29,7 @@ class BroadwayBooks():
                 month_url = f'{self.event_source_url}{m}'
                 print(f"Making extra call to [ {month_url} ]")
                 soup_next_month = getBeautifulSoupParserFromUrl(f'{month_url}')
-            events.extend(soup_next_month.find_all('td', {'class': 'single-day future'}))
+                events.extend(soup_next_month.find_all('td', {'class': 'single-day future'}))
 
         for e in events:
             title = e.findChildren('div', {'class': 'views-field-title'})[0].get_text().strip()
