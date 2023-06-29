@@ -49,10 +49,10 @@ if __name__ == "__main__":
         results = source.pullEvents(today, report_end_date)
         events.extend(results)
 
+    unique_events = { e for e in events }
+    events = list(unique_events)
     # Sort events by date
     events.sort(key=lambda x: x.date)
-
-    unique_events = { e for e in events }
     out_file = 'pdx-weekly-report'
     if args.one_week:
         out_file = f"{out_file}-{today.strftime('%Y%m%d')}-{report_end_date.strftime('%Y%m%d')}.{output_type}"
@@ -60,6 +60,6 @@ if __name__ == "__main__":
         out_file = f"{out_file}-{today.strftime('%Y%m%d')}.{output_type}"
 
     if output_type == 'html':
-        generate_html(out_file, formatDate(today), formatDate(report_end_date), unique_events)
+        generate_html(out_file, formatDate(today), formatDate(report_end_date), events)
     else:
-        generate_csv(out_file, unique_events)
+        generate_csv(out_file, events)

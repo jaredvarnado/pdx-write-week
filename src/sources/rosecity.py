@@ -20,6 +20,11 @@ class RoseCityBookPub():
             event_rel_link = e.findChildren('a', {'class': 'eventlist-title-link'})[0].get('href')
             event_abs_link = f'{self.endpoint}{event_rel_link}'
             event_title = e.findChildren('h1', {'class': 'eventlist-title'})[0].get_text()
+
+            # Skip events when the store is closed
+            if event_title == 'Closed':
+                continue
+
             event_title = f'{event_title} {self.at_rose_city_books}'
             event_date = e.findChildren('time', {'class': 'event-date'})[0].get_text().strip()
             event_date_formated = formatDate(datetime.datetime.strptime(event_date, self.date_format).date())
