@@ -66,9 +66,15 @@ class WillametteWriters():
                 title = self.formatTitle(atag.get('title'))
                 event_date = e.findChildren('time')[0].get('datetime')
                 event_date_formated = formatDate(datetime.datetime.strptime(event_date, self.date_format).date())
-                event_start = e.findChildren('span', {'class': 'tribe-event-date-start'})[0].get_text()
-                event_start = event_start.split('@')[1].strip()
-                event_end = e.findChildren('span', {'class': 'tribe-event-time'})[0].get_text()
+
+                event_start = e.findChildren('span', {'class': 'tribe-event-date-start'})
+                if len(event_start) > 0:
+                    event_start = event_start[0].get_text().split('@')[1].strip()
+                    event_end = e.findChildren('span', {'class': 'tribe-event-time'})[0].get_text()
+                else:
+                    event_start = e.findChildren('div', {'class': 'tribe-events-calendar-month-mobile-events__mobile-event-datetime'})[0].get_text().strip()
+                    event_end = None
+
                 result = Event(title, event_date_formated, event_start, event_end, link, self.will_writers)
                 if shouldIncludeEvent(result, period_start, period_end):
                     results.append(result)

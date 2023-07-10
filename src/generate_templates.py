@@ -10,7 +10,7 @@ TABLE_TEMPLATE_FILE = f"{THIS_DIR}/templates/event_table.template.jinja"
 CSV_FIELDS = ['Event', 'Description', 'Date', 'Link', 'Source', 'Week Number']
 
 def generate_csv(out_file, events):
-    with open(out_file, 'w') as f:
+    with open(out_file, 'w', encoding='utf-8') as f:
         csvwriter = csv.writer(f)
         csvwriter.writerow(CSV_FIELDS)
         for e in events:
@@ -27,5 +27,5 @@ def generate_html(out_file, startTime, endTime, events):
         events=events
     )
 
-    with open(out_file, 'w') as f:
+    with open(out_file, 'w', encoding='utf-8') as f:
         f.write(html)
